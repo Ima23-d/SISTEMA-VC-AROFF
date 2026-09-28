@@ -51,26 +51,43 @@ PersonDetectorCam/
 ```
 
 - `board_config.h` e `camera_pins.h`: os mesmos do exemplo CameraWebServer. O `board_config.h` já deve ter `#define CAMERA_MODEL_AI_THINKER` ativo e as demais linhas comentadas.
-- `person_detect_model_data.h/.cpp`: o modelo de detecção de pessoa (96x96, tons de cinza). Veja a seção abaixo.
+- `person_detect_model_data.h/.cpp`: o modelo de detecção de pessoa (96x96, tons de cinza), já incluído nesta pasta. Veja a seção abaixo.
 
 ### Onde conseguir o modelo
 
-O modelo faz parte do exemplo **person_detection** do TensorFlow Lite Micro. Procure os arquivos `person_detect_model_data.cc` e `person_detect_model_data.h` em um destes lugares:
+Os arquivos `person_detect_model_data.h` e `person_detect_model_data.cpp` **já estão prontos nesta pasta**. Basta mantê-los ao lado do `.ino`.
 
-- Repositório `tflite-micro` (`tensorflow/lite/micro/examples/person_detection/`)
-- Repositório `espressif/tflite-micro-esp-examples` (exemplo `person_detection`)
-- Algum exemplo dentro da própria biblioteca Chirale_TensorFlowLite
+Eles foram gerados a partir do modelo oficial do TensorFlow Lite Micro, `person_detect.tflite` (cerca de 294 KB), que fica em:
 
-Se o caminho mudou, busque pelo nome `person_detect_model_data` no repositório.
+`https://github.com/tensorflow/tflite-micro/blob/main/tensorflow/lite/micro/models/person_detect.tflite`
 
-Depois de baixar:
+Nas versões atuais do repositório, o `.cc` não é mais um arquivo fixo: ele é gerado na compilação a partir desse `.tflite`. Por isso, se quiser refazer os arquivos (ou usar outro modelo), converta o `.tflite` você mesmo:
 
-1. **Renomeie** o `.cc` para `.cpp`.
-2. No `.cpp`, troque a linha de `#include` que aponta para o `.h` por:
-   ```cpp
-   #include "person_detect_model_data.h"
-   ```
-3. O `.h` deve declarar `g_person_detect_model_data` e `g_person_detect_model_data_len`. É esse nome que o sketch usa.
+**Linux / macOS / Git Bash:**
+```bash
+xxd -i person_detect.tflite > person_detect_model_data.cpp
+```
+Depois edite o `.cpp` para ter este formato (ajuste os nomes gerados pelo xxd):
+```cpp
+#include "person_detect_model_data.h"
+alignas(16) const unsigned char g_person_detect_model_data[] = { /* bytes */ };
+const int g_person_detect_model_data_len = /* tamanho */;
+```
+
+**Windows (Python):**
+```python
+data = open("person_detect.tflite", "rb").read()
+body = ",\n".join("  " + ", ".join(f"0x{b:02x}" for b in data[i:i+12]) for i in range(0, len(data), 12))
+open("person_detect_model_data.cpp", "w").write(
+    '#include "person_detect_model_data.h"\n'
+    f"alignas(16) const unsigned char g_person_detect_model_data[] = {{\n{body}\n}};\n"
+    f"const int g_person_detect_model_data_len = {len(data)};\n")
+```
+E o `.h` deve conter:
+```cpp
+extern const unsigned char g_person_detect_model_data[];
+extern const int g_person_detect_model_data_len;
+```
 
 ---
 
